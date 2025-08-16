@@ -1,1 +1,316 @@
-HELO SMAN 1 WOHA
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Absen Siswa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .demo-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #f59e0b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="demo-badge">DEMO - Google Sheets</div>
+    
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">📚 Absen Siswa</h1>
+            <p class="text-gray-600">Sistem Absensi Digital Kelas</p>
+            <div class="mt-4 bg-white rounded-lg shadow-sm p-4 inline-block">
+                <div class="text-sm text-gray-500">Tanggal Hari Ini</div>
+                <div id="currentDate" class="text-lg font-semibold text-gray-800"></div>
+            </div>
+        </div>
+
+        <!-- Class Selection -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Pilih Kelas</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button onclick="selectClass('7A')" class="class-btn bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                    Kelas 7A
+                </button>
+                <button onclick="selectClass('7B')" class="class-btn bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                    Kelas 7B
+                </button>
+                <button onclick="selectClass('8A')" class="class-btn bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                    Kelas 8A
+                </button>
+                <button onclick="selectClass('8B')" class="class-btn bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                    Kelas 8B
+                </button>
+            </div>
+            <div id="selectedClass" class="mt-4 text-center text-gray-600"></div>
+        </div>
+
+        <!-- Student List -->
+        <div id="studentSection" class="bg-white rounded-xl shadow-lg p-6 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-800">Daftar Siswa</h2>
+                <div class="flex gap-2">
+                    <button onclick="markAllPresent()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Semua Hadir
+                    </button>
+                    <button onclick="resetAttendance()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <div id="studentList" class="space-y-3"></div>
+
+            <!-- Summary -->
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h3 class="font-semibold text-gray-800 mb-2">Ringkasan Absensi</h3>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <div class="text-2xl font-bold text-green-600" id="presentCount">0</div>
+                        <div class="text-sm text-green-700">Hadir</div>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-lg">
+                        <div class="text-2xl font-bold text-red-600" id="absentCount">0</div>
+                        <div class="text-sm text-red-700">Tidak Hadir</div>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-lg">
+                        <div class="text-2xl font-bold text-yellow-600" id="lateCount">0</div>
+                        <div class="text-sm text-yellow-700">Terlambat</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="mt-6 text-center">
+                <button onclick="saveAttendance()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-colors shadow-lg">
+                    💾 Simpan ke Google Sheets
+                </button>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hidden">
+            ✅ Data absensi berhasil disimpan!
+        </div>
+    </div>
+
+    <script>
+        // Sample student data
+        const studentData = {
+            '7A': [
+                'Ahmad Rizki', 'Siti Nurhaliza', 'Budi Santoso', 'Dewi Sartika', 'Eko Prasetyo',
+                'Fitri Handayani', 'Gilang Ramadhan', 'Hana Pertiwi', 'Indra Gunawan', 'Joko Widodo',
+                'Kartika Sari', 'Lestari Wulandari', 'Muhammad Fadli', 'Nisa Rahmawati', 'Oki Setiawan'
+            ],
+            '7B': [
+                'Putri Maharani', 'Qori Sumanto', 'Rina Susanti', 'Surya Pratama', 'Tina Marlina',
+                'Umar Bakri', 'Vina Safitri', 'Wahyu Hidayat', 'Xenia Putri', 'Yudi Setiawan',
+                'Zahra Amelia', 'Arif Rahman', 'Bella Safira', 'Citra Dewi', 'Dani Kurniawan'
+            ],
+            '8A': [
+                'Eka Pratiwi', 'Fajar Sidiq', 'Gita Savitri', 'Hendra Wijaya', 'Ika Sari',
+                'Jihan Aulia', 'Kevin Ananda', 'Luna Maharani', 'Mira Sartika', 'Nanda Pratama',
+                'Olivia Putri', 'Pandu Winata', 'Qonita Rahma', 'Reza Pahlevi', 'Sari Indah'
+            ],
+            '8B': [
+                'Taufik Hidayat', 'Ulfa Khoiriyah', 'Vicky Prasetya', 'Winda Sari', 'Yoga Pratama',
+                'Zaki Rahman', 'Ayu Lestari', 'Bayu Aji', 'Cinta Bella', 'Dinda Permata',
+                'Erlangga Putra', 'Fani Oktavia', 'Galih Pratama', 'Hesti Wulandari', 'Irfan Maulana'
+            ]
+        };
+
+        let currentClass = '';
+        let attendanceData = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentDate();
+        });
+
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('id-ID', options);
+        }
+
+        function selectClass(className) {
+            currentClass = className;
+            document.getElementById('selectedClass').textContent = `Kelas terpilih: ${className}`;
+            document.getElementById('studentSection').classList.remove('hidden');
+            
+            // Reset active class buttons
+            document.querySelectorAll('.class-btn').forEach(btn => {
+                btn.classList.remove('ring-4', 'ring-opacity-50');
+            });
+            
+            // Highlight selected class
+            event.target.classList.add('ring-4', 'ring-opacity-50');
+            
+            loadStudents(className);
+        }
+
+        function loadStudents(className) {
+            const students = studentData[className];
+            const studentList = document.getElementById('studentList');
+            studentList.innerHTML = '';
+            attendanceData = {};
+
+            students.forEach((student, index) => {
+                attendanceData[student] = 'belum';
+                
+                const studentCard = document.createElement('div');
+                studentCard.className = 'flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors';
+                studentCard.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                            <span class="font-semibold text-blue-600">${index + 1}</span>
+                        </div>
+                        <span class="font-medium text-gray-800">${student}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="markAttendance('${student}', 'hadir')" 
+                                class="attendance-btn-${student.replace(/\s+/g, '')} bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                            ✓ Hadir
+                        </button>
+                        <button onclick="markAttendance('${student}', 'terlambat')" 
+                                class="attendance-btn-${student.replace(/\s+/g, '')} bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                            ⏰ Terlambat
+                        </button>
+                        <button onclick="markAttendance('${student}', 'tidak_hadir')" 
+                                class="attendance-btn-${student.replace(/\s+/g, '')} bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                            ✗ Tidak Hadir
+                        </button>
+                    </div>
+                `;
+                studentList.appendChild(studentCard);
+            });
+
+            updateSummary();
+        }
+
+        function markAttendance(student, status) {
+            attendanceData[student] = status;
+            
+            // Update button states
+            const studentKey = student.replace(/\s+/g, '');
+            const buttons = document.querySelectorAll(`.attendance-btn-${studentKey}`);
+            
+            buttons.forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-white', 'ring-opacity-50');
+            });
+
+            // Highlight selected button
+            const selectedBtn = event.target;
+            selectedBtn.classList.add('ring-2', 'ring-white', 'ring-opacity-50');
+
+            updateSummary();
+        }
+
+        function markAllPresent() {
+            Object.keys(attendanceData).forEach(student => {
+                attendanceData[student] = 'hadir';
+                
+                // Update UI
+                const studentKey = student.replace(/\s+/g, '');
+                const buttons = document.querySelectorAll(`.attendance-btn-${studentKey}`);
+                buttons.forEach(btn => btn.classList.remove('ring-2', 'ring-white', 'ring-opacity-50'));
+                buttons[0].classList.add('ring-2', 'ring-white', 'ring-opacity-50');
+            });
+            
+            updateSummary();
+        }
+
+        function resetAttendance() {
+            Object.keys(attendanceData).forEach(student => {
+                attendanceData[student] = 'belum';
+                
+                // Reset UI
+                const studentKey = student.replace(/\s+/g, '');
+                const buttons = document.querySelectorAll(`.attendance-btn-${studentKey}`);
+                buttons.forEach(btn => btn.classList.remove('ring-2', 'ring-white', 'ring-opacity-50'));
+            });
+            
+            updateSummary();
+        }
+
+        function updateSummary() {
+            let presentCount = 0;
+            let absentCount = 0;
+            let lateCount = 0;
+
+            Object.values(attendanceData).forEach(status => {
+                if (status === 'hadir') presentCount++;
+                else if (status === 'tidak_hadir') absentCount++;
+                else if (status === 'terlambat') lateCount++;
+            });
+
+            document.getElementById('presentCount').textContent = presentCount;
+            document.getElementById('absentCount').textContent = absentCount;
+            document.getElementById('lateCount').textContent = lateCount;
+        }
+
+        function saveAttendance() {
+            // Simulate saving to Google Sheets
+            const attendanceRecord = {
+                date: new Date().toLocaleDateString('id-ID'),
+                class: currentClass,
+                attendance: attendanceData,
+                summary: {
+                    present: document.getElementById('presentCount').textContent,
+                    absent: document.getElementById('absentCount').textContent,
+                    late: document.getElementById('lateCount').textContent
+                }
+            };
+
+            // In a real implementation, this would send data to Google Sheets API
+            console.log('Data yang akan disimpan:', attendanceRecord);
+
+            // Show success message
+            const successMsg = document.getElementById('successMessage');
+            successMsg.classList.remove('hidden');
+            setTimeout(() => {
+                successMsg.classList.add('hidden');
+            }, 3000);
+
+            // Create downloadable CSV as demo
+            createCSVDownload(attendanceRecord);
+        }
+
+        function createCSVDownload(data) {
+            let csvContent = "Nama Siswa,Status,Tanggal,Kelas\n";
+            
+            Object.entries(data.attendance).forEach(([student, status]) => {
+                const statusText = status === 'hadir' ? 'Hadir' : 
+                                 status === 'tidak_hadir' ? 'Tidak Hadir' : 
+                                 status === 'terlambat' ? 'Terlambat' : 'Belum Dicatat';
+                csvContent += `${student},${statusText},${data.date},${data.class}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `absensi_${data.class}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96fc83cc5402e782',t:'MTc1NTMwMDk5NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
